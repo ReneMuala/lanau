@@ -7,7 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		172821A9264BE83E00E55C46 /* wav.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 172821A7264BE83E00E55C46 /* wav.cpp */; };
+		176B08D9264E90F000B85D86 /* RtAudio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 176B08D7264E90EF00B85D86 /* RtAudio.cpp */; };
+		176B08DD264E936F00B85D86 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 176B08DC264E936F00B85D86 /* CoreAudio.framework */; };
+		176B08E0264E937F00B85D86 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 176B08DF264E937F00B85D86 /* CoreFoundation.framework */; };
 		1778F9972649307000199FC8 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1778F9962649307000199FC8 /* main.cpp */; };
+		1778F9A02649308C00199FC8 /* lanau.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1778F99E2649308C00199FC8 /* lanau.cpp */; };
+		1778F9AE264931BC00199FC8 /* ID3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1778F9AD264931BC00199FC8 /* ID3.cpp */; };
+		1778F9B1264932CC00199FC8 /* mp3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1778F9A2264930AA00199FC8 /* mp3.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -23,8 +30,22 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		172821A7264BE83E00E55C46 /* wav.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wav.cpp; sourceTree = "<group>"; };
+		172821A8264BE83E00E55C46 /* wav.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = wav.hpp; sourceTree = "<group>"; };
+		176B08D7264E90EF00B85D86 /* RtAudio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RtAudio.cpp; sourceTree = "<group>"; };
+		176B08D8264E90F000B85D86 /* RtAudio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RtAudio.h; sourceTree = "<group>"; };
+		176B08DC264E936F00B85D86 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		176B08DF264E937F00B85D86 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		1778F9932649307000199FC8 /* lanau */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = lanau; sourceTree = BUILT_PRODUCTS_DIR; };
 		1778F9962649307000199FC8 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		1778F99E2649308C00199FC8 /* lanau.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = lanau.cpp; sourceTree = "<group>"; };
+		1778F99F2649308C00199FC8 /* lanau.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = lanau.hpp; sourceTree = "<group>"; };
+		1778F9A2264930AA00199FC8 /* mp3.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = mp3.cpp; sourceTree = "<group>"; };
+		1778F9A3264930AA00199FC8 /* mp3.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mp3.hpp; sourceTree = "<group>"; };
+		1778F9AD264931BC00199FC8 /* ID3.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ID3.cpp; sourceTree = "<group>"; };
+		1778F9B72649418100199FC8 /* ID3 */ = {isa = PBXFileReference; lastKnownFileType = text; path = ID3; sourceTree = "<group>"; };
+		1778F9B82649419E00199FC8 /* Winamp */ = {isa = PBXFileReference; lastKnownFileType = text; path = Winamp; sourceTree = "<group>"; };
+		1778F9BA2649423300199FC8 /* Lanau */ = {isa = PBXFileReference; lastKnownFileType = text; path = Lanau; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,17 +53,38 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				176B08E0264E937F00B85D86 /* CoreFoundation.framework in Frameworks */,
+				176B08DD264E936F00B85D86 /* CoreAudio.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		172821AB264BE84600E55C46 /* wav */ = {
+			isa = PBXGroup;
+			children = (
+				172821A7264BE83E00E55C46 /* wav.cpp */,
+				172821A8264BE83E00E55C46 /* wav.hpp */,
+			);
+			path = wav;
+			sourceTree = "<group>";
+		};
+		176B08DB264E936F00B85D86 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				176B08DF264E937F00B85D86 /* CoreFoundation.framework */,
+				176B08DC264E936F00B85D86 /* CoreAudio.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		1778F98A2649307000199FC8 = {
 			isa = PBXGroup;
 			children = (
 				1778F9952649307000199FC8 /* lanau */,
 				1778F9942649307000199FC8 /* Products */,
+				176B08DB264E936F00B85D86 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -57,9 +99,44 @@
 		1778F9952649307000199FC8 /* lanau */ = {
 			isa = PBXGroup;
 			children = (
+				176B08D7264E90EF00B85D86 /* RtAudio.cpp */,
+				176B08D8264E90F000B85D86 /* RtAudio.h */,
 				1778F9962649307000199FC8 /* main.cpp */,
+				1778F99E2649308C00199FC8 /* lanau.cpp */,
+				1778F99F2649308C00199FC8 /* lanau.hpp */,
+				1778F9B9264941BB00199FC8 /* genres */,
+				1778F9A6264930B700199FC8 /* decoders */,
 			);
 			path = lanau;
+			sourceTree = "<group>";
+		};
+		1778F9A6264930B700199FC8 /* decoders */ = {
+			isa = PBXGroup;
+			children = (
+				172821AB264BE84600E55C46 /* wav */,
+				1778F9AC2649316E00199FC8 /* mp3 */,
+			);
+			path = decoders;
+			sourceTree = "<group>";
+		};
+		1778F9AC2649316E00199FC8 /* mp3 */ = {
+			isa = PBXGroup;
+			children = (
+				1778F9A2264930AA00199FC8 /* mp3.cpp */,
+				1778F9A3264930AA00199FC8 /* mp3.hpp */,
+				1778F9AD264931BC00199FC8 /* ID3.cpp */,
+			);
+			path = mp3;
+			sourceTree = "<group>";
+		};
+		1778F9B9264941BB00199FC8 /* genres */ = {
+			isa = PBXGroup;
+			children = (
+				1778F9B72649418100199FC8 /* ID3 */,
+				1778F9B82649419E00199FC8 /* Winamp */,
+				1778F9BA2649423300199FC8 /* Lanau */,
+			);
+			path = genres;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -118,7 +195,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1778F9B1264932CC00199FC8 /* mp3.cpp in Sources */,
+				1778F9AE264931BC00199FC8 /* ID3.cpp in Sources */,
+				172821A9264BE83E00E55C46 /* wav.cpp in Sources */,
 				1778F9972649307000199FC8 /* main.cpp in Sources */,
+				176B08D9264E90F000B85D86 /* RtAudio.cpp in Sources */,
+				1778F9A02649308C00199FC8 /* lanau.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
