@@ -11,47 +11,62 @@
 #include <string>
 #include <iostream>
 
-bool wav::fopen_rb(const char * filename){
+dwav::RtAudioStreamConfiguration::RtAudioStreamConfiguration(dwav& context){
+    this->context = &context;
+}
+
+const int dwav::RtAudioStreamConfiguration::get_nChannels(){
+    return context->wavFile.fmtSubChunk.numChannels;
+}
+
+const int dwav::RtAudioStreamConfiguration::get_sampleRate(){
+    return context->wavFile.fmtSubChunk.sampleRate;
+}
+
+const int dwav::RtAudioStreamConfiguration::get_bufferFrame() {
+    return context->wavFile.fmtSubChunk.byteRate;
+}
+
+const int dwav::RtAudioStreamConfiguration::get_audioLen(){
+    switch (context->wavFile.fmtSubChunk.bitsPerSample) {
+        case 8:
+            return context->wavFile.dataChunk.SubChunk2Size /(sizeof(int8_t)*get_nChannels());
+            break;
+        case 16:
+            return context->wavFile.dataChunk.SubChunk2Size /(sizeof(int16_t)*get_nChannels());
+            break;
+        default:
+            return 0;
+            break;
+    }
+}
+
+const void * dwav::StreamConfiguration::get_audioSamples(){
+    return context->wavFile.dataChunk.samples;
+}
+
+const unsigned int dwav::StreamConfiguration::get_RtAudio_StreamOptions(){
+#ifdef __RTAUDIO_H
+    return RTAUDIO_MINIMIZE_LATENCY;
+#else
+    return 0x2;
+#endif
+}
+
+const unsigned long dwav::StreamConfiguration::get_RtAudio_AudioFormat(){
+#ifdef __RTAUDIO_H
+    return RTAUDIO_SINT16;
+#else
+    return 0x2;
+#endif
+}
+
+bool dwav::fopen_rb(const char * filename){
     if(file != nullptr) fclose(file);
     return (file = fopen(filename, "rb"));
 }
 
-bool wav::fopen_wb(const char * filename){
-    if(file != nullptr) fclose(file);
-    return (file = fopen(filename, "wb"));
-}
-
-void wav::throw_error(ErrorId error_id, const char *msg){
-    std::string error_message = "LANAU " + std::to_string(LanauApi::version) + " ";
-    switch (error_id) {
-        case file__nullptr:
-            error_message += "(file.nullptr - std::runtime_error)";
-            break;
-        case pull__unexpected_EOF:
-            error_message += "(pull.unexpected_EOF - std::runtime_error)";
-            break;
-        case pull__invalid_chunck_descriptor:
-            error_message += "(pull.invalid_chunck_descriptor - std::runtime_error)";
-            break;
-        case pull__invalid_fmt_chunck:
-            error_message += "(pull.invalid_fmt_chunck - std::runtime_error)";
-            break;
-        case pull__invalid_data_chunck:
-            error_message += "(pull.invalid_data_chunck - std::runtime_error)";
-            break;
-        case pull__invalid_metadata_chunck:
-            error_message += "(pull.invalid_metadata_chunck - std::runtime_error)";
-            break;
-        default:
-            break;
-    }
-    error_message += "\"";
-    error_message += msg;
-    error_message += "\"";
-    throw std::runtime_error(error_message);
-}
-
-void * wav::popData(size_t size, size_t n){
+void * dwav::popData(size_t size, size_t n){
     static void * data = nullptr;
     if(data != nullptr) {free(data); data = nullptr;}
         if(file){
@@ -64,217 +79,257 @@ void * wav::popData(size_t size, size_t n){
     return data;
 }
 
-wav::ChunckDecriptor * wav::getChunckDescriptor(){
+dwav::ChunkDecriptor * dwav::getChunkDescriptor(){
     if(file) {
         // Read "RIFF" and check
-        if(fread(wavFileInfo.chunckDescriptor.riff, sizeof(char), 4, file) && strncmp(wavFileInfo.chunckDescriptor.riff, "RIFF", 4) == 0){
+        if(fread(wavFile.chunkDescriptor.riff, sizeof(char), 4, file) && strncmp(wavFile.chunkDescriptor.riff, "RIFF", 4) == 0){
             // get chunkSize
-            wavFileInfo.chunckDescriptor.chunkSize = *(int*)popData(sizeof(int), 1); //
+            wavFile.chunkDescriptor.chunkSize = *(int*)popData(sizeof(int), 1); //
             // Read "WAVE" and check
-            if(fread(wavFileInfo.chunckDescriptor.wave, sizeof(char), 4, file) && strncmp(wavFileInfo.chunckDescriptor.wave, "WAVE", 4) == 0) {
-                return &wavFileInfo.chunckDescriptor;
-            } throw_error(pull__invalid_chunck_descriptor, "Unable to read WAVE-str");
-        } throw_error(pull__invalid_chunck_descriptor, "Unable to read RIFF-str");
+            if(fread(wavFile.chunkDescriptor.wave, sizeof(char), 4, file) && strncmp(wavFile.chunkDescriptor.wave, "WAVE", 4) == 0) {
+                return &wavFile.chunkDescriptor;
+            } throw_error(pull__invalid_chunk_descriptor, "Unable to read WAVE-str");
+        } throw_error(pull__invalid_chunk_descriptor, "Unable to read RIFF-str");
     } throw_error(file__nullptr, "Unable to read file");
     return nullptr;
 }
 
-wav::FmtSubchunk * wav::getFmtSubchunk(){
+dwav::FmtSubChunk * dwav::getFmtSubchunk(){
     if(file){
         // buffer to store "fmt"+(char)32
         char fmt__buff_str[4];
         sprintf(fmt__buff_str, "fmt%c",32);
         // Read "fmt"+(char)32 and check
-        if(fread(wavFileInfo.fmtSubChunck.fmt_, sizeof(char), 4, file) && strncmp(wavFileInfo.fmtSubChunck.fmt_, fmt__buff_str, 4) == 0){
-            // read chuncksSize
-            wavFileInfo.fmtSubChunck.SubChunk1Size = *(int*)popData(sizeof(int), 1);
-            if(wavFileInfo.fmtSubChunck.SubChunk1Size == 16){
+        if(fread(wavFile.fmtSubChunk.fmt_, sizeof(char), 4, file) && strncmp(wavFile.fmtSubChunk.fmt_, fmt__buff_str, 4) == 0){
+            // read chunksSize
+            wavFile.fmtSubChunk.SubChunk1Size = *(int*)popData(sizeof(int), 1);
+            if(wavFile.fmtSubChunk.SubChunk1Size == 16){
                 // read audio format
-                wavFileInfo.fmtSubChunck.audioFormat = *(short*)popData(sizeof(short), 1);
-                if(wavFileInfo.fmtSubChunck.audioFormat == 1){
+                wavFile.fmtSubChunk.audioFormat = *(short*)popData(sizeof(short), 1);
+                if(wavFile.fmtSubChunk.audioFormat == 1){
                     // read nchannets
-                    wavFileInfo.fmtSubChunck.numChannels = *(short*)popData(sizeof(short), 1);
+                    wavFile.fmtSubChunk.numChannels = *(short*)popData(sizeof(short), 1);
                     // read sampleRate
-                    wavFileInfo.fmtSubChunck.sampleRate = *(int*)popData(sizeof(int), 1);
+                    wavFile.fmtSubChunk.sampleRate = *(int*)popData(sizeof(int), 1);
                     // read byteRate
-                    wavFileInfo.fmtSubChunck.byteRate = *(int*)popData(sizeof(int), 1);
+                    wavFile.fmtSubChunk.byteRate = *(int*)popData(sizeof(int), 1);
                     // read blockAlign
-                    wavFileInfo.fmtSubChunck.blockAlign = *(short*)popData(sizeof(short), 1);
+                    wavFile.fmtSubChunk.blockAlign = *(short*)popData(sizeof(short), 1);
                     // read bitsPerSample
-                    wavFileInfo.fmtSubChunck.bitsPerSample = *(short*)popData(sizeof(short), 1);
-                    if(wavFileInfo.fmtSubChunck.bitsPerSample == 8 || wavFileInfo.fmtSubChunck.bitsPerSample == 16) {
-                        return &wavFileInfo.fmtSubChunck;
-                    } throw_error(pull__invalid_fmt_chunck, "Unsopported bits per sample");
-                } throw_error(pull__invalid_fmt_chunck, "Unsopported audio format");
-            } throw_error(pull__invalid_fmt_chunck, "Unsopported chunck size");
-        } throw_error(pull__invalid_fmt_chunck, "Unable to read fmt?-str");
+                    wavFile.fmtSubChunk.bitsPerSample = *(short*)popData(sizeof(short), 1);
+                    if(wavFile.fmtSubChunk.bitsPerSample == 8 || wavFile.fmtSubChunk.bitsPerSample == 16) {
+                        return &wavFile.fmtSubChunk;
+                    } throw_error(pull__invalid_fmt_chunk, "Unsopported bits per sample");
+                } throw_error(pull__invalid_fmt_chunk, "Unsopported audio format");
+            } throw_error(pull__invalid_fmt_chunk, "Unsopported chunk size");
+        } throw_error(pull__invalid_fmt_chunk, "Unable to read fmt?-str");
     } throw_error(file__nullptr, "Unable to read file");
     return nullptr;
 }
 
-wav::DataSubChunck * wav::getDataChunck(){
+dwav::DataSubChunk * dwav::getDataChunk(){
     if(file) {
         size_t sample_unit_size = 0;
         // decide the best way to store samples
-        switch (wavFileInfo.fmtSubChunck.bitsPerSample) {
-            case 8: sample_unit_size = sizeof(uint8_t); break;
-            case 16: sample_unit_size = sizeof(int16_t)*wavFileInfo.fmtSubChunck.numChannels; break;
-            default: throw_error(pull__invalid_fmt_chunck, "Unsopported bits per sample"); break;
+        switch (wavFile.fmtSubChunk.bitsPerSample) {
+            case 8: sample_unit_size = sizeof(uint8_t)*wavFile.fmtSubChunk.numChannels; break;
+            case 16: sample_unit_size = sizeof(int16_t)*wavFile.fmtSubChunk.numChannels; break;
+            default: throw_error(pull__invalid_fmt_chunk, "Unsopported bits per sample"); break;
         }
         // read "DATA" and check
-        if(fread(wavFileInfo.dataChunck.data, sizeof(char), 4, file) && strncmp(wavFileInfo.dataChunck.data, "DATA", 0) == 0){
-            // read chunck size and check
-            if ((wavFileInfo.dataChunck.SubChunk2Size = *(int*)popData(sizeof(int), 1))){
+        if(fread(wavFile.dataChunk.data, sizeof(char), 4, file) && strncmp(wavFile.dataChunk.data, "DATA", 0) == 0){
+            // read chunk size and check
+            if ((wavFile.dataChunk.SubChunk2Size = *(int*)popData(sizeof(int), 1))){
                 // allocate the necessary memory to store samples
-                wavFileInfo.dataChunck.samples = new int[wavFileInfo.dataChunck.SubChunk2Size/sample_unit_size];
-                //(void**)malloc((wavFileInfo.dataChunck.SubChunk2Size/sample_unit_size));
-                std::cout << "# samples size: " << wavFileInfo.dataChunck.SubChunk2Size << ", readable: " << (wavFileInfo.dataChunck.SubChunk2Size/sample_unit_size) * sample_unit_size << std::endl;
+                wavFile.dataChunk.samples = new int[wavFile.dataChunk.SubChunk2Size/sample_unit_size];
+                //(void**)malloc((wavFile.dataChunk.SubChunk2Size/sample_unit_size));
+                std::cout << "# samples size: " << wavFile.dataChunk.SubChunk2Size << ", sample packs: " << (wavFile.dataChunk.SubChunk2Size/sample_unit_size) << std::endl;
                 // read samples
-                int *_p = (int*)wavFileInfo.dataChunck.samples;
-                for (int i = 0 ; i < (wavFileInfo.dataChunck.SubChunk2Size/sample_unit_size) ; i++){
+                int *_p = (int*)wavFile.dataChunk.samples;
+                for (int i = 0 ; i < (wavFile.dataChunk.SubChunk2Size/sample_unit_size) ; i++){
                     _p[i] = *(int*)popData(sample_unit_size, 1);
 //                    std::cout
 //                    << (int&)_p[i]
-//                    << " (" << i << " / " << (wavFileInfo.dataChunck.SubChunk2Size/sample_unit_size) << ")"<< std::endl;
-                } return &wavFileInfo.dataChunck;
-            } throw_error(pull__invalid_fmt_chunck, "Invalid chunck size");
-        } throw_error(pull__invalid_data_chunck, "Unable to read DATA-str");
+//                    << " (" << i << " / " << (wavFile.dataChunk.SubChunk2Size/sample_unit_size) << ")"<< std::endl;
+                } return &wavFile.dataChunk;
+            } throw_error(pull__invalid_fmt_chunk, "Invalid chunk size");
+        } throw_error(pull__invalid_data_chunk, "Unable to read DATA-str");
     } throw_error(file__nullptr, "Unable to read file");
     return nullptr;
 }
 
-wav::ListChunck * wav::getListInfoChunk(){
+dwav::ListChunk * dwav::getListInfoChunk(){
     if(file){
         // read "LIST" and check
-        if(fread(wavFileInfo.listInfo.list , sizeof(char), 4, file) && strncmp(wavFileInfo.listInfo.list, "LIST", 4) == 0){
-            // read chunck size and check
-            wavFileInfo.listInfo.chunckSize = *(int*)popData(sizeof(int), 1);
-            // ignore if not LIST/INFO
-            prevNextChunck();
-            if(strncmp(wavFileInfo.infoSubChunk.iuknSubChunk.iukn, "INFO", 4) != 0)
-                ignoreChunck(wavFileInfo.listInfo.chunckSize);
-            return &wavFileInfo.listInfo;
-        } throw_error(pull__invalid_data_chunck, "Unable to read LIST-str");
+        if(fread(wavFile.listInfo.list , sizeof(char), 4, file) && strncmp(wavFile.listInfo.list, "LIST", 4) == 0){
+            // read chunk size and check
+            wavFile.listInfo.chunkSize = *(int*)popData(sizeof(int), 1);
+            // std::cout << "SIZE: " << wavFile.listInfo.chunkSize << std::endl;            // ignore if not LIST/INFO
+            prevNextChunk();
+            if(strncmp(wavFile.infoSubChunk.iuknSubChunk.iukn, "INFO", 4) != 0)
+                ignoreChunk(wavFile.listInfo.chunkSize);
+            return &wavFile.listInfo;
+        } throw_error(pull__invalid_data_chunk, "Unable to read LIST-str");
     } throw_error(file__nullptr, "Unable to read file");
     return nullptr;
 }
 
-wav::InfoSubChunk * wav::getInfoChunck(){
+dwav::InfoSubChunk * dwav::getInfoChunk(){
     if(file){
         // read "INFO" and check
-        if(fread(wavFileInfo.infoSubChunk.info , sizeof(char), 4, file) && strncmp(wavFileInfo.infoSubChunk.info, "INFO", 4) == 0){
-            return &wavFileInfo.infoSubChunk;
-        } throw_error(pull__invalid_data_chunck, "Unable to read INFO-str");
+        if(fread(wavFile.infoSubChunk.info , sizeof(char), 4, file) && strncmp(wavFile.infoSubChunk.info, "INFO", 4) == 0){
+            return &wavFile.infoSubChunk;
+        } throw_error(pull__invalid_data_chunk, "Unable to read INFO-str");
     } throw_error(file__nullptr, "Unable to read file");
     return nullptr;
 }
 
-wav::InfoSubChunk::SubChunck * wav::getinfoSubChunck(const char *chunckName, char * chunckNameAddr, InfoSubChunk::SubChunck &chunk){
-    //std::cout << "+\tReading: " << chunckName << std::endl;
+dwav::InfoSubChunk::SubChunk * dwav::getInfoSubChunk(const char *chunkName, char * chunkNameAddr, InfoSubChunk::SubChunk &chunk){
+    //std::cout << "Reading: " << chunkName;
     if(file){
-        // read "${chunckName}" and check
-        if(fread(chunckNameAddr, sizeof(char), 4, file) && strncmp(chunckName, chunckNameAddr, 4) == 0){
-            // read chunck size and check
+        // read "${chunkName}" and check
+        if(fread(chunkNameAddr, sizeof(char), 4, file) && strncmp(chunkName, chunkNameAddr, 4) == 0){
+            // read chunk size and check
             chunk.size = *(int*)popData(sizeof(int), 1);
-            //std::cout << "-\tChunck size: " << chunk.size << std::endl;
+            //std::cout << " size: " << chunk.size;
 //            fpos_t test;
 //            fgetpos(file, &test);
             if(chunk.size){
-                // read chunck data
+                // read chunk data
                 fread(chunk.data, sizeof(char), chunk.size, file);
-                //std::cout << "chunckData: " << (char*)chunk.data << std::endl;;
-                //ignoreChunck(1);
+                //std::cout << " data: " << (char*)chunk.data << std::endl;;
+                //ignoreChunk(1);
                 return &chunk;
-            } throw_error(pull__invalid_metadata_chunck, "Invalid chunck size");
-        } throw_error(pull__invalid_data_chunck, ("Unable to read " + std::string(chunckName)+"-str").c_str());
+            } throw_error(pull__invalid_LIST_chunk, "Invalid chunk size");
+        } throw_error(pull__invalid_data_chunk, ("Unable to read " + std::string(chunkName)+"-str").c_str());
     } throw_error(file__nullptr, "Unable to read file");
     return nullptr;
 }
 
-bool wav::prevNextChunck(){
+bool dwav::prevNextChunk(){
     if(file && !feof(file)){
         fgetpos(file, &hpos);
-        fread(wavFileInfo.infoSubChunk.iuknSubChunk.iukn, sizeof(char), 4, file);
+        fread(wavFile.infoSubChunk.iuknSubChunk.iukn, sizeof(char), 4, file);
         if(feof(file)) return false;
-        wavFileInfo.infoSubChunk.iuknSubChunk.size = *(int*) popData(sizeof(int), 1);
+        wavFile.infoSubChunk.iuknSubChunk.size = *(int*) popData(sizeof(int), 1);
         fsetpos(file, &hpos);
         return true;
     } return false;
 }
 
-void wav::ignoreChunck(size_t size){
+void dwav::ignoreChunk(size_t size){
     void ** buffer = (void**)calloc(size, 1);
     fread(buffer, 1, size, file);
     free(buffer);
 }
 
-wav::wav(){
+dwav::dwav(){
+    streamConfiguration = new StreamConfiguration(*this);
     file = nullptr;
 }
 
-bool wav::push(const char *){
-    return true;
+void dwav::throw_error(ErrorId error_id, const char *msg){
+    std::string error_message = "LANAU " + std::string(LanauApi::version) + " ";
+    switch (error_id) {
+        case file__nullptr:
+            error_message += "(file.nullptr - std::runtime_error)";
+            break;
+        case pull__unexpected_EOF:
+            error_message += "(pull.unexpected_EOF - std::runtime_error)";
+            break;
+        case push__invalid_chunk_descriptor:
+            error_message += "(push.invalid_chunk_descriptor - std::runtime_error)";
+            break;
+        case push__invalid_fmt_chunk:
+            error_message += "(push.invalid_fmt_chunk - std::runtime_error)";
+            break;
+        case push__invalid_data_chunk:
+            error_message += "(push.invalid_data_chunk - std::runtime_error)";
+            break;
+        case pull__invalid_chunk_descriptor:
+            error_message += "(pull.invalid_chunk_descriptor - std::runtime_error)";
+            break;
+        case pull__invalid_fmt_chunk:
+            error_message += "(pull.invalid_fmt_chunk - std::runtime_error)";
+            break;
+        case pull__invalid_data_chunk:
+            error_message += "(pull.invalid_data_chunk - std::runtime_error)";
+            break;
+        case pull__invalid_LIST_chunk:
+            error_message += "(pull.invalid_LIST_chunk - std::runtime_error)";
+            break;
+        default:
+            break;
+    }
+    error_message += "\"";
+    error_message += msg;
+    error_message += "\"";
+    throw std::runtime_error(error_message);
 }
 
-bool wav::pull(const char * filename){
+bool dwav::pull(const char * filename){
     if(fopen_rb(filename)){
-        bool chunckDescriptorFound (false),
-        fmtChunckFound(false),
-        dataChunckFound(false);
-        char * chunckName = wavFileInfo.infoSubChunk.iuknSubChunk.iukn;
-        int * chunkSize = &wavFileInfo.infoSubChunk.iuknSubChunk.size;
-        InfoSubChunk * infoSubChunck = &wavFileInfo.infoSubChunk;
-        while (prevNextChunck()) {
-            
-            if(strncmp(chunckName, "RIFF", 4) == 0) {
-                getChunckDescriptor();
-                chunckDescriptorFound = true;
-            } else if(strncmp(chunckName, "fmt", 3) == 0) {
+        bool chunkDescriptorFound (false),
+        fmtChunkFound(false),
+        dataChunkFound(false);
+        char * chunkName = wavFile.infoSubChunk.iuknSubChunk.iukn;
+        int * chunkSize = &wavFile.infoSubChunk.iuknSubChunk.size;
+        InfoSubChunk * infoSubChunk = &wavFile.infoSubChunk;
+        while (prevNextChunk()) {
+            //std::cout << "chunk name: " << chunkName << std::endl;
+            if(strncmp(chunkName, "RIFF", 4) == 0) {
+                getChunkDescriptor();
+                chunkDescriptorFound = true;
+            } else if(strncmp(chunkName, "fmt", 3) == 0) {
                 getFmtSubchunk();
-                fmtChunckFound = true;
-            } else if(strncmp(chunckName, "data", 4) == 0) {
-                getDataChunck();
-                dataChunckFound = true;
-            }  else if(strncmp(chunckName, "LIST", 4) == 0)
+                fmtChunkFound = true;
+            } else if(strncmp(chunkName, "data", 4) == 0) {
+                getDataChunk();
+                dataChunkFound = true;
+            }  else if(strncmp(chunkName, "LIST", 4) == 0)
                 getListInfoChunk();
-            else if(strncmp(chunckName, "INFO", 4) == 0)
-                getInfoChunck();
-            else if(strncmp(chunckName, "INAM", 4) == 0)
-                getinfoSubChunck("INAM", infoSubChunck->inamSubChunk.inam, infoSubChunck->inamSubChunk);
-            else if(strncmp(chunckName, "IPRD", 4) == 0)
-                getinfoSubChunck("IPRD", infoSubChunck->iprdSubChunk.iprd, infoSubChunck->iprdSubChunk);
-            else if(strncmp(chunckName, "IART", 4) == 0)
-                getinfoSubChunck("IART", infoSubChunck->iartSubChunk.iart, infoSubChunck->iartSubChunk);
-            else if(strncmp(chunckName, "ICRD", 4) == 0)
-                getinfoSubChunck("ICRD", infoSubChunck->icrdSubChunk.icrd, infoSubChunck->icrdSubChunk);
-            else if(strncmp(chunckName, "ITRK", 4) == 0)
-                getinfoSubChunck("ITRK", infoSubChunck->itrkSubChunk.itrk, infoSubChunck->itrkSubChunk);
-            else if(strncmp(chunckName, "ICMT", 4) == 0)
-            getinfoSubChunck("ICMT", infoSubChunck->itcmtSubChunk.itcmt, infoSubChunck->itcmtSubChunk);
-            else if(strncmp(chunckName, "ISFT", 4) == 0)
-                getinfoSubChunck("ISFT", infoSubChunck->isftSubChunk.isft, infoSubChunck->isftSubChunk);
-            else if(strncmp(chunckName, "IENG", 4) == 0)
-            getinfoSubChunck("IENG", infoSubChunck->iengSubChunk.ieng, infoSubChunck->iengSubChunk);
-            else if(strncmp(chunckName, "IGNR", 4) == 0)
-                getinfoSubChunck("IGNR", infoSubChunck->ignrSubChunk.ignr, infoSubChunck->ignrSubChunk);
-            else if(strncmp(chunckName, "ICOP", 4) == 0)
-            getinfoSubChunck("ICOP", infoSubChunck->icopSubChunkv.icop, infoSubChunck->icopSubChunkv);
-            else if(strncmp(chunckName, "ISBJ", 4) == 0)
-                getinfoSubChunck("ISBJ", infoSubChunck->isbjSubChunk.isbj, infoSubChunck->isbjSubChunk);
-            else if(strncmp(chunckName, "ISRC", 4) == 0)
-            getinfoSubChunck("ISRC", infoSubChunck->isrcSubChunk.isrc, infoSubChunck->isrcSubChunk);
+            else if(strncmp(chunkName, "INFO", 4) == 0)
+                getInfoChunk();
+            else if(strncmp(chunkName, "INAM", 4) == 0)
+                getInfoSubChunk("INAM", infoSubChunk->inamSubChunk.inam, infoSubChunk->inamSubChunk);
+            else if(strncmp(chunkName, "IPRD", 4) == 0)
+                getInfoSubChunk("IPRD", infoSubChunk->iprdSubChunk.iprd, infoSubChunk->iprdSubChunk);
+            else if(strncmp(chunkName, "IART", 4) == 0)
+                getInfoSubChunk("IART", infoSubChunk->iartSubChunk.iart, infoSubChunk->iartSubChunk);
+            else if(strncmp(chunkName, "ICRD", 4) == 0)
+                getInfoSubChunk("ICRD", infoSubChunk->icrdSubChunk.icrd, infoSubChunk->icrdSubChunk);
+            else if(strncmp(chunkName, "ITRK", 4) == 0)
+                getInfoSubChunk("ITRK", infoSubChunk->itrkSubChunk.itrk, infoSubChunk->itrkSubChunk);
+            else if(strncmp(chunkName, "ICMT", 4) == 0)
+            getInfoSubChunk("ICMT", infoSubChunk->icmtSubChunk.icmt, infoSubChunk->icmtSubChunk);
+            else if(strncmp(chunkName, "IKEY", 4) == 0)
+                getInfoSubChunk("IKEY", infoSubChunk->ikeySubChunk.ikey, infoSubChunk->ikeySubChunk);
+            else if(strncmp(chunkName, "ISFT", 4) == 0)
+                getInfoSubChunk("ISFT", infoSubChunk->isftSubChunk.isft, infoSubChunk->isftSubChunk);
+            else if(strncmp(chunkName, "IENG", 4) == 0)
+            getInfoSubChunk("IENG", infoSubChunk->iengSubChunk.ieng, infoSubChunk->iengSubChunk);
+            else if(strncmp(chunkName, "IGNR", 4) == 0)
+                getInfoSubChunk("IGNR", infoSubChunk->ignrSubChunk.ignr, infoSubChunk->ignrSubChunk);
+            else if(strncmp(chunkName, "ICOP", 4) == 0)
+            getInfoSubChunk("ICOP", infoSubChunk->icopSubChunk.icop, infoSubChunk->icopSubChunk);
+            else if(strncmp(chunkName, "ISBJ", 4) == 0)
+                getInfoSubChunk("ISBJ", infoSubChunk->isbjSubChunk.isbj, infoSubChunk->isbjSubChunk);
+            else if(strncmp(chunkName, "ISRC", 4) == 0)
+            getInfoSubChunk("ISRC", infoSubChunk->isrcSubChunk.isrc, infoSubChunk->isrcSubChunk);
             else {
-                if(strlen(chunckName) == 4 && isascii(chunckName[0])) {
-                    ignoreChunck((int&)*chunkSize);
-                } else ignoreChunck(1);
+                if(strlen(chunkName) == 4 && isascii(chunkName[0])) {
+                    ignoreChunk((int&)*chunkSize);
+                } else
+                    ignoreChunk(1);
             }
-        } return chunckDescriptorFound && dataChunckFound && fmtChunckFound;
+        } return chunkDescriptorFound && dataChunkFound && fmtChunkFound;
     }
     throw_error(file__nullptr, "Unable to open file");
     return false;
 }
 
-wav::~wav(){
+dwav::~dwav(){
+    delete streamConfiguration;
     if(file != nullptr)
         fclose(file);
 }

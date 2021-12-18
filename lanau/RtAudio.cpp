@@ -1033,7 +1033,7 @@ bool RtApiCore :: probeDeviceOpen( unsigned int device, StreamMode mode, unsigne
   }
 
   // Look for a single stream meeting our needs.
-  UInt32 firstStream, streamCount = 1, streamChannels = 0, channelOffset = 0;
+  UInt32 firstStream = -1 /* - 1 added by ReneMuala to silence warning */ , streamCount = 1, streamChannels = 0, channelOffset = 0;
   for ( iStream=0; iStream<nStreams; iStream++ ) {
     streamChannels = bufferList->mBuffers[iStream].mNumberChannels;
     if ( streamChannels >= channels + offsetCounter ) {
